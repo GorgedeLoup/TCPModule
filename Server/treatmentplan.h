@@ -6,6 +6,7 @@ using namespace std;
 
 struct Parameter
 {
+    float volt;
     short sonicationTime;
     short sonicationPeriod;
     float dutyCycle;
@@ -13,12 +14,11 @@ struct Parameter
 };
 
 
-struct Coordinate
+struct Coordinate3D
 {
-    int spotNum;
-    QList<double> spotPosX;
-    QList<double> spotPosY;
-    QList<double> spotPosZ;
+    float spotPosX;
+    float spotPosY;
+    float spotPosZ;
 };
 
 
@@ -27,6 +27,5 @@ struct TreatmentPlan
     Parameter parameter;
     Coordinate coordinate;
 };
-
 
 #endif // TREATMENTPLAN

@@ -1,4 +1,4 @@
-#include <QtWidgets>
+-#include <QtWidgets>
 #include <QtNetwork>
 #include <QList>
 #include <QDebug>
@@ -25,7 +25,7 @@ Client::Client(QWidget *parent) : QDialog(parent)
 
     setWindowTitle(tr("Client"));
 
-// Build client object and the connections
+// Initialize variables and connections
     QDataStream in(m_tcpClientConnection);
     in.setVersion(QDataStream::Qt_4_6);
 
@@ -74,7 +74,7 @@ void Client::acceptConnection()
 }
 
 
-// Receive data
+// Useless, delete later
 void Client::updateClientProgress()
 {
     QDataStream in(m_tcpClientConnection);
@@ -122,7 +122,7 @@ void Client::updateClientProgress()
 }
 
 
-// Get the local IP address
+// Get local IP address
 QString Client::getLocalIP()
 {
     QString ipAddress;
@@ -163,12 +163,13 @@ void Client::readHead()
     }
     if (head == 2)
     {
-        receivePlan();
+        receivePlanHash();
         //receivePlanHash();
     }
 }
 
 
+// Receive and write treatment plan from server machine
 void Client::receivePlan()
 {
     QDataStream in(m_tcpClientConnection);
@@ -223,37 +224,52 @@ void Client::receivePlan()
 }
 
 
+// Useless, delete later
 void Client::receivePlanHash()
 {
     QDataStream in(m_tcpClientConnection);
     in.setVersion(QDataStream::Qt_4_6);
 
     qDebug() << "Receiving plan...";
+    QString sendInfo;
 
-    in >> m_totalBytes;
-            //>> m_hashPlan;
-
-    m_plan = m_hashPlan[1];
+    in >> m_totalBytes
+            >> m_spot3D
+            >> m_spotOrder
+            >> m_parameter
+            >> sendInfo;
 
     qDebug() << "m_totalBytes:" << m_totalBytes << endl
 
-             << "spotNum:" << m_plan.coordinate.spotNum << endl
-             << "spotPosX:" << m_plan.coordinate.spotPosX << endl
-             << "spotPosY:" << m_plan.coordinate.spotPosY << endl
-             << "spotPosZ:" << m_plan.coordinate.spotPosZ << endl
-             << "coolingTime:" << m_plan.parameter.coolingTime << endl
-             << "dutyCycle:" << m_plan.parameter.dutyCycle << endl
-             << "sonicationPeriod:" << m_plan.parameter.sonicationPeriod << endl
-             << "sonicationTime" << m_plan.parameter.sonicationTime;
+             << "m_spot3D:" << m_spot3D << endl
+             << "m_spotOrder:" << m_spotOrder << endl
+             << "m_parameter:" << m_parameter << endl
+             << "sendInfo:" << sendInfo;
 
     m_inBlock.resize(0);
+    qDebug() << "Receive plan finished.";
+
+    QDataStream out(&m_outBlock, QIODevice::WriteOnly);
+    out.setVersion(QDataStream::Qt_4_6);
+
+    qDebug() << "Write back...";
+
+    out << sendInfo;
+
+    connect(m_tcpClientConnection, SIGNAL(bytesWritten(qint64)), this, SLOT(bytes(qint64)));
+    m_tcpClientConnection->write(m_outBlock);
+
+    qDebug() << sendInfo;
+
+    m_outBlock.resize(0);
+
+    qDebug() << "Send back finished.";
 
     m_tcpClientConnection->close();
-    qDebug() << "Receive plan finished.";
 }
 
 
-// 1 start, 2 stop, 3 pause, 4 resume
+// Receive command: 1 start, 2 stop, 3 pause, 4 resume
 void Client::receiveCommand()
 {
     QDataStream in(m_tcpClientConnection);
@@ -267,25 +283,20 @@ void Client::receiveCommand()
 
     switch (m_command) {
     case 1:
-        emit commandStart(); qDebug() << "Start";
+        emit commandStart(); qDebug() << "Start"; emit commandStart();
         break;
     case 2:
-        emit commandStop(); qDebug() << "Stop";
+        emit commandStop(); qDebug() << "Stop"; emit commandStop();
         break;
     case 3:
-        emit commandPause(); qDebug() << "Pause";
+        emit commandPause(); qDebug() << "Pause"; emit commandPause();
         break;
     case 4:
-        emit commandResume(); qDebug() << "Resume";
+        emit commandResume(); qDebug() << "Resume"; emit commandResume();
         break;
     default:
         break;
     }
-
-//    if (m_command == "start"){emit commandStart(); qDebug() << "Start";}
-//    if (m_command == "stop") {emit commandStop(); qDebug() << "Stop";}
-//    if (m_command == "pause") {emit commandPause(); qDebug() << "Pause";}
-//    if (m_command == "resume") {emit commandResume(); qDebug() << "Resume";}
 
     m_inBlock.resize(0);
 
@@ -294,6 +305,7 @@ void Client::receiveCommand()
 }
 
 
+// Check whether the send-back data is right, not necessary
 void Client::bytes(qint64 byteswrite)
 {
     qDebug() << "Bytes Written:" << byteswrite;

@@ -27,7 +27,10 @@ private:
     QDataStream out;
 
     TreatmentPlan m_plan;
-    QHash<int, TreatmentPlan> m_hashPlan;
+    //QHash<int, TreatmentPlan> m_hashPlan;
+    QHash<float, QList<QList> > m_spot3D;
+    QHash<float, QList<int> > m_spotOrder;
+    QHash<QString, short> m_parameter;
     qint64 m_command;
 
     QPushButton *u_connectButton;

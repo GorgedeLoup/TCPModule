@@ -35,7 +35,10 @@ private:
 
     QString m_ipAddress;    // The IPV4 address of current computer
 
-    TreatmentPlan m_plan;
+    //QHash<float, QList<Coordinate3D> > m_spot3D;
+    QHash<float, QList<QList> > m_spot3D;
+    QHash<float, QList<int> > m_spotOrder;
+    QHash<QString, short> m_parameter;
 
     QPushButton *u_sendPlanButton;
     QPushButton *u_sendCommandButton;
@@ -72,6 +75,9 @@ private slots:
     void writtenBytes(qint64);
 
 public slots:
+    void getCoordinate(QHash);
+    void getSpotOrder(QHash);
+    void getParameter(QHash);
 };
 
 #endif // SERVER_H

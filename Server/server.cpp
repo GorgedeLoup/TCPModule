@@ -47,8 +47,8 @@ Server::Server(QWidget *parent) : QDialog(parent)
 
     connect(m_tcpServer, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(displayError(QAbstractSocket::SocketError)));
 
-    connect(u_sendPlanButton, SIGNAL(clicked()), this, SLOT(sendPlan()));
-    //connect(u_sendPlanButton, SIGNAL(clicked()), this, SLOT(sendPlanHash()));
+    //connect(u_sendPlanButton, SIGNAL(clicked()), this, SLOT(sendPlan()));
+    connect(u_sendPlanButton, SIGNAL(clicked()), this, SLOT(sendPlanHash()));
     connect(u_sendCommandButton, SIGNAL(clicked()), this, SLOT(sendCommandStart()));
 }
 
@@ -266,7 +266,7 @@ void Server::sendCommandResume()
 }
 
 
-// Useless, delete later
+// Send treatment plan in
 void Server::sendPlanHash()
 {
     QHostAddress ipAddress("172.168.0.116");
@@ -276,20 +276,51 @@ void Server::sendPlanHash()
     m_sendOut.setVersion(QDataStream::Qt_4_6);
 
     qDebug() << "Sending plan...";
+    QString sendInfo = writeSendInfo();
+
+    // Write data
+    connect(m_tcpServer, SIGNAL(bytesWritten(qint64)), this, SLOT(writtenBytes(qint64)));    // Check if the data has been all well written
 
     m_sendOut << qint64(0)
-              << qint64(0);
-              //<< m_hashPlan;
-    m_totalBytes = sizeof(m_hashPlan);
+              << qint64(0)
+              << m_spot3D
+              << m_spotOrder
+              << m_parameter
+              << sendInfo;
+
+    qDebug() << "sendInfo:" << sendInfo;
+
+    m_totalBytes = m_outBlock.size();
     qDebug() << "m_totalBytes:" << m_totalBytes;
     m_sendOut.device()->seek(0);
-    m_sendOut << qint64(2) << m_totalBytes;
+    m_sendOut << qint64(2) << m_totalBytes;    // Find the head of array and write the haed information
 
     m_tcpServer->write(m_outBlock);
+
+    m_sendTimeNum += 1;
+    m_writtenBytes = 0;
     m_outBlock.resize(0);
 
-    m_tcpServer->close();
     qDebug() << "Send finished";
+
+    // Read send-back data
+    connect(m_tcpServer, SIGNAL(readyRead()), this, SLOT(readSendBack()));
+
+    m_tcpServer->waitForReadyRead(3000);
+
+    qDebug() << m_receivedInfo;
+
+    // Check the consistency of the send-back data
+    if(m_receivedInfo == sendInfo)
+    {
+        qDebug() << "Send-back checked.";
+        m_receivedInfo = "";
+    }
+    else
+    {
+        emit error_sendBackCheck();
+        qDebug() << "Check failed ! emit error signal...";
+    }
 }
 
 
@@ -335,3 +366,10 @@ void Server::writtenBytes(qint64 bytesWrite)
     if (m_writtenBytes != m_totalBytes) {emit error_sendCheck(); qDebug() << "Send error !";}
     else {qDebug()<< "Send checked !";}
 }
+
+
+void Server::getCoordinate(QHash<float, QList<Coordinate3D> > spot3D){m_spot3D = spot3D;}
+
+void Server::getSpotOrder(QHash<float, QList<int> > spotOrder){m_spotOrder = spotOrder;}
+
+void Server::getParameter(QHash<QString, int> parameter()){m_parameter() = parameter();}
